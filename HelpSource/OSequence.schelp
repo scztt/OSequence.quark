@@ -1,0 +1,228 @@
+TITLE:: OSequence
+summary:: (put short description here)
+categories:: Undocumented classes
+related:: Classes/SomeRelatedClass, Reference/SomeRelatedStuff, etc.
+
+DESCRIPTION::
+(put long description here)
+
+
+CLASSMETHODS::
+
+METHOD:: new
+(describe method here)
+
+ARGUMENT::  ... args
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+
+INSTANCEMETHODS::
+
+METHOD:: events
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: putAll
+(describe method here)
+
+ARGUMENT:: time
+(describe argument here)
+
+ARGUMENT:: valueArray
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: sub
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: end
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: delete
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: end
+(describe argument here)
+
+ARGUMENT:: ripple
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: duration
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: envWarp
+(describe method here)
+
+ARGUMENT:: env
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: warp
+(describe method here)
+
+ARGUMENT:: func
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: overwrite
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: seq
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: putSeq
+(describe method here)
+
+ARGUMENT:: baseTime
+(describe argument here)
+
+ARGUMENT:: seq
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: reverse
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: doReplace
+(describe method here)
+
+ARGUMENT:: func
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: doReplaceSeq
+(describe method here)
+
+ARGUMENT:: func
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: stretch
+(describe method here)
+
+ARGUMENT:: newDuration
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: insert
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: end
+(describe argument here)
+
+ARGUMENT:: seq
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: stretchBy
+(describe method here)
+
+ARGUMENT:: factor
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: crop
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: end
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: do
+(describe method here)
+
+ARGUMENT:: func
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: put
+(describe method here)
+
+ARGUMENT:: time
+(describe argument here)
+
+ARGUMENT:: value
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: doPutSeq
+(describe method here)
+
+ARGUMENT:: func
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: init
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: extend
+(describe method here)
+
+returns:: (describe returnvalue here)
+
+METHOD:: replaceSub
+(describe method here)
+
+ARGUMENT:: start
+(describe argument here)
+
+ARGUMENT:: end
+(describe argument here)
+
+ARGUMENT:: func
+(describe argument here)
+
+ARGUMENT:: ripple
+(describe argument here)
+
+returns:: (describe returnvalue here)
+
+
+EXAMPLES::
+
+code::
+(some example code)
+::
