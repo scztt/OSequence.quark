@@ -105,15 +105,13 @@ OSequence {
 	put {
 		|time, value|
 		if (value.notNil) {
-			var eventList = events[time] ?? {
-				var newList;
-				events[time] = newList = List();
-				newList;
+			if (extend) {
+				duration = max(
+					duration,
+					time + this.prGetDur(value)
+				);
 			};
-			if (extend && (time > duration)) {
-				duration = time;
-			};
-			eventList.add(value);
+			this.at(time).add(value);
 		}
 	}
 
