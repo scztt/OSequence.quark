@@ -69,6 +69,15 @@ OSequence {
 
 		^seq
 	}
+
+	copy {
+		var eventsCopy = events.collect {
+			|eventList|
+			eventList.copy
+		};
+		^super.shallowCopy.events_(eventsCopy);
+	}
+
 	init {
 		events = Order();
 	}
