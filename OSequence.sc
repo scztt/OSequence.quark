@@ -82,6 +82,15 @@ OSequence {
 		events = Order();
 	}
 
+	at {
+		|time|
+		^events[time] ?? {
+			var newList;
+			events[time] = newList = List();
+			newList;
+		};
+	}
+
 	do {
 		|func|
 		events.do {
