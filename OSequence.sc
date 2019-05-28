@@ -118,15 +118,16 @@ OSequence {
 	putAll {
 		|time, valueArray|
 		if (valueArray.notNil) {
-			var eventList = events[time] ?? {
-				var newList;
-				events[time] = newList = List();
-				newList;
+			if (extend) {
+				duration = max(
+					duration,
+					time + valueArray.maxValue({
+						|e|
+						this.prGetDur(e)
+					})
+				)
 			};
-			if (extend && (time > duration)) {
-				duration = time;
-			};
-			eventList.addAll(valueArray);
+			this.at(time).addAll(valueArray);
 		}
 	}
 
