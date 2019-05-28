@@ -291,4 +291,100 @@ OSequence {
 			this.overwrite(start, sub);
 		}
 	}
+
+	prGetDur {
+		|e|
+		^try({
+			e.dur ? 0
+		}, {
+			0
+		})
+	}
+
+	prSetDur {
+		|e, dur=0|
+		try {
+			e.dur = dur
+		}
+	}
+
+	prUpdateEventDurs {
+		var lastTime = 0;
+		var lastEvents, duration;
+		events.do {
+			|eventList, time|
+			"% - %".format(time, lastTime).postln;
+			if (lastEvents.notNil) {
+				duration = time - lastTime;
+				lastEvents.do {
+					|e|
+					if (e.isKindOf(Event)) {
+						this.prSetDur(e, duration)
+					}
+				}
+			};
+			lastEvents = eventList;
+			lastTime = time;
+		};
+		duration = max(0, this.duration - lastTime);
+		lastEvents.do {
+			|e|
+			if (e.isKindOf(Event)) {
+				this.prSetDur(e, duration);
+			}
+		}
+	}
+
+	play {
+		|event=(Event.default), repeats=1|
+		EventStreamPlayer(this.asStream(repeats), event).play
+	}
+
+	embedInStream {
+		|inEvent, repeats|
+		repeats.do {
+			var lastEvents;
+			var lastTime = 0;
+			var playEvents = {
+				|time|
+				lastEvents.do {
+					|event, i|
+					event = event.composeEvents(inEvent);
+
+					if (i < (lastEvents.size - 1)) {
+						event[\delta] = 0;
+					} {
+						event[\delta] = time - lastTime;
+					};
+
+					inEvent = event.yield;
+					if (inEvent.isNil) {
+						nil.yield;
+					}
+				}
+			};
+
+			events.do {
+				|eventList, time|
+
+				if (lastEvents.isNil) {
+					if (time > 0) {
+						(dur: Rest(time)).yield;
+					}
+				} {
+					playEvents.value(time);
+				};
+
+				lastEvents = eventList;
+				lastTime = time;
+			};
+
+			playEvents.value(duration);
+		}
+	}
+
+	asStream {
+		|repeats=1|
+		^Routine({ arg inval; this.embedInStream(inval, repeats) })
+	}
 }
