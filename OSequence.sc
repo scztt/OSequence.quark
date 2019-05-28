@@ -133,11 +133,9 @@ OSequence {
 
 	putSeq {
 		|baseTime, seq|
-		if (seq.notNil) {
-			seq.events.do {
-				|events, time|
-				this.putAll(baseTime + time, events)
-			};
+		seq.do {
+			|event, time|
+			this.put(baseTime + time, event)
 		}
 	}
 
