@@ -12,6 +12,63 @@ OSequence {
 		^obj
 	}
 
+	*from {
+		|streamable, duration, trim=true, protoEvent|
+		^this.fromStream(streamable.asStream, duration, trim, protoEvent);
+	}
+
+	*fromStream {
+		|stream, duration, trim=true, protoEvent|
+		var seq = OSequence();
+		var startTime = 0;
+		var endTime = startTime + (duration ? 1000);
+		var time = startTime;
+		var oldTime = thisThread.beats;
+
+		thisThread.beats = startTime;
+
+		protect {
+			protoEvent = protoEvent ?? { Event.default };
+			while {
+				var dur, outEvent;
+
+				outEvent = stream.next(protoEvent.copy);
+
+				if (outEvent.notNil) {
+					seq.put(time, outEvent);
+					dur = outEvent.dur.value();
+
+					if (trim && ((time + dur) > endTime)) {
+						dur = endTime - time;
+						outEvent.dur = dur;
+					};
+
+					if (dur.notNil) {
+						thisThread.beats = time = time + dur;
+					}
+				};
+
+				(dur.notNil && outEvent.notNil && (time < endTime));
+			};
+
+			if (duration.notNil) {
+				seq.duration = duration;
+			} {
+				seq.duration = 0;
+				seq.events.do {
+					|eventList, t|
+					eventList.do {
+						|e|
+						seq.duration = max(seq.duration, t + seq.prGetDur(e))
+					}
+				}
+			};
+		} {
+			thisThread.beats = oldTime;
+		};
+
+		^seq
+	}
 	init {
 		events = Order();
 	}
