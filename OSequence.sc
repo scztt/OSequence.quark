@@ -1,9 +1,9 @@
 OSequence {
-	var <events;
-	var <>extend=false, <>duration = 0;
+	var <>events;
+	var <>extend=true, <>modifyEvents=true, <>duration = 0;
 
 	*new {
-		|...args|
+		|... args|
 		var obj = super.new.init;
 		args.pairsDo {
 			|time, value|
@@ -140,80 +140,111 @@ OSequence {
 	}
 
 	delete {
-		|start=0, end, ripple=false|
+		|start, end, ripple=false|
+		start = max(start, 0);
 		end = end ?? duration;
-		events = events.reject({
-			|val, t|
-			(t >= start) && (t <= end)
-		});
+
+		events = events.reject {
+			|event, t|
+			(t >= start) && (t < end)
+		};
 
 		if (ripple) {
 			var range = end - start;
 			this.warp({
 				|t|
-				if (t > end) { t - range } { t };
-			})
-		};
+				if (t >= start) {
+					if (t < end) {
+						start.max(0)
+					} {
+						// >end
+						t - range;
+					}
+				} { t }
+			}, ripple);
+		} {
+			if (modifyEvents) {
+				this.warp({
+					|t|
+					if ((t >= start) && (t < end)) {
+						start
+					} { t }
+				}, false)
+			}
+		}
 	}
 
 	crop {
 		|start=0, end|
-		var newEvents = Order();
-		end = end ?? duration;
-		events.do({
-			|val, t|
-			if ((t >= start) && (t <= end)) {
-				newEvents[t - start] = val;
+		this.delete(end, inf, true);
+		if (start > 0) {
+			this.delete(0, start, true);
+		}
+	}
+
+	warp {
+		|func, warpDuration=true|
+		var oldEvents = events;
+		events = Order();
+
+		oldEvents.do {
+			|eventList, time|
+			eventList.do {
+				|event|
+				var newStart = func.value(time, event);
+
+				if (modifyEvents) {
+					var newEnd = func.value(time + this.prGetDur(event), event);
+					if (newEnd < newStart) {
+						var e = newEnd;
+						newEnd = newStart;
+						newStart = e;
+					};
+					this.put(newStart, event);
+					this.prSetDur(event, newEnd - newStart);
+				} {
+					this.put(newStart, event);
+				}
 			}
-		});
-		events = newEvents;
-		duration = end - start;
+		};
+
+		if (warpDuration) {
+			duration = func.value(duration);
+		}
 	}
 
 	envWarp {
-		|env|
+		|env, warpDuration=true|
 		env = env.copy.duration_(duration);
 		this.warp({
 			|time|
 			env.at(time);
-		})
-	}
-
-	warp {
-		|func|
-		var oldEvents = events;
-		events = Order();
-		oldEvents.do({
-			|eventList, time|
-			eventList.do {
-				|event|
-				this.put(func.value(time, event), event);
-			}
-		});
+		}, warpDuration)
 	}
 
 	stretch {
 		|newDuration|
 		var ratio = newDuration / duration;
-		this.warp({ |t| t * ratio });
-		duration = newDuration;
+		this.warp({ |t| t * ratio }, true);
 	}
 
 	stretchBy {
 		|factor=1|
-		this.warp({ |t| t * factor });
-		duration = duration * factor;
+		this.warp({ |t| t * factor }, true);
 	}
 
 	reverse {
-		this.warp({ |t| duration - t })
+		this.warp({
+			|t|
+			duration - t
+		}, false);
 	}
 
 	doPutSeq {
 		|func|
 		events.copy.do {
 			|eventList, time|
-			eventList.do {
+			eventList.copy.do {
 				|event|
 				this.putSeq(time, func.value(event, time))
 			}
@@ -246,34 +277,38 @@ OSequence {
 
 	sub {
 		|start = 0, end|
-		var sub = this.copy;
-		sub.crop(start, end);
-		^sub;
+		^this.copy.crop(start, end);
 	}
 
 	overwrite {
 		|start, seq|
 		var end = start + seq.duration;
-		this.delete(start, end);
+		this.delete(start, end, false);
 		this.putSeq(start, seq);
 	}
 
 	insert {
-		|start, end, seq|
-		var insertDur = end - start;
-		this.delete(start, end);
-		if (insertDur != seq.duration) {
-			this.warp({
-				|t|
-				if (t > end) {
-					t = t + duration - insertDur
-				} {
-					t
-				}
-			})
-		};
-		this.putSeq(start, seq);
+		|time, seq|
+		this.warp({
+			|t|
+			if (t > time) {
+				t = t + seq.duration
+			} {
+				t
+			}
+		}, true);
+		this.putSeq(time, seq);
 	}
+
+	++ {
+		|other|
+		var newDuration = this.duration + other.duration;
+		^this.copy.putSeq(this.duration, other).duration_(newDuration);
+	}
+
+	times { ^events.indices }
+
+	indices { ^events.indices }
 
 	replaceSub {
 		|start=0, end, func, ripple=false|
@@ -285,8 +320,9 @@ OSequence {
 			sub = this.sub(start, end);
 			sub = func.value(sub);
 		};
+
 		if (ripple) {
-			this.insert(start, end, sub)
+			this.delete(start, end, ripple).insert(start, sub);
 		} {
 			this.overwrite(start, sub);
 		}
