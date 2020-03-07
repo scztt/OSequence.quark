@@ -540,7 +540,7 @@ OSequence {
 
 				if (lastEvents.isNil) {
 					if (time > 0) {
-						(dur: Rest(time)).yield;
+						Event.silent(time).yield;
 					}
 				} {
 					playEvents.value(time);
