@@ -35,12 +35,16 @@ OSequence {
 				outEvent = stream.next(protoEvent.copy);
 
 				if (outEvent.notNil) {
-					seq.put(time, outEvent);
-					dur = outEvent.dur.value();
+					if (outEvent.isRest) {
+						dur = outEvent.dur.value();
+					} {
+						seq.put(time, outEvent);
+						dur = outEvent.dur.value();
 
-					if (trim && ((time + dur) > endTime)) {
-						dur = endTime - time;
-						outEvent.dur = dur;
+						if (trim && ((time + dur) > endTime)) {
+							dur = endTime - time;
+							outEvent.dur = dur;
+						};
 					};
 
 					if (dur.notNil) {
