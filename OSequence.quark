@@ -1,15 +1,16 @@
 (
-name:		"OSequence",
-summary:	"A class for manipulating sequences of events through primitive operations.",
-author:		"scott@artificia.org",
-copyright:	"Frank Scott Carver, 2015",
-license:	"MIT",
-version: 	"0.0.2",
-schelp: 	"OSequence",
-test:		"Test/OSequence_unittest.scd",
-url:		"https://github.com/scztt/OSequence.quark",
-dependencies:	[],
-isCompatible:	true,
-since:		"2015"
-)
+          name: "OSequence",
+       summary: "A class for manipulating sequences of events through primitive operations.",
+        author: "scott@artificia.org",
+     copyright: "Frank Scott Carver, 2015",
+       license: "MIT",
+       version: "0.0.3",
+        schelp: "OSequence",
+          test: "Test/OSequence_unittest.scd",
+           url: "https://github.com/scztt/OSequence.quark",
+  dependencies: [
 
+                ],
+  isCompatible: true ,
+         since: "2015"
+)
