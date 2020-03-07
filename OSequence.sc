@@ -546,7 +546,7 @@ OSequence {
 				|time|
 				lastEvents.do {
 					|event, i|
-					event = event.composeEvents(inEvent);
+					event = inEvent.composeEvents(event);
 
 					if (i < (lastEvents.size - 1)) {
 						event[\delta] = 0;
