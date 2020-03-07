@@ -268,14 +268,15 @@ OSequence {
 				var newStart = func.value(time, event);
 
 				if (modifyEvents) {
-					var newEnd = func.value(time + this.prGetDur(event), event);
+					var newEnd = this.prGetSustain(event).asArray.maxItem;
+					newEnd = func.value(time + newEnd, event);
 					if (newEnd < newStart) {
 						var e = newEnd;
 						newEnd = newStart;
 						newStart = e;
 					};
 					this.put(newStart, event);
-					this.prSetDur(event, newEnd - newStart);
+					this.prSetSustain(event, newEnd - newStart);
 				} {
 					this.put(newStart, event);
 				}
@@ -345,7 +346,7 @@ OSequence {
 				|event|
 				func.value(event, time)
 			}).reject(_.isNil)
-		})
+		}).reject(_.isEmpty)
 	}
 
 	doReplaceSeq {
@@ -466,7 +467,7 @@ OSequence {
 	prGetDur {
 		|e|
 		^try({
-			e.dur ? 0
+			e[\dur] ?? 0
 		}, {
 			0
 		})
@@ -475,7 +476,32 @@ OSequence {
 	prSetDur {
 		|e, dur=0|
 		try {
-			e.dur = dur
+			e[\dur] = dur
+		}
+	}
+
+	prGetSustain {
+		|e|
+		var dur;
+		^try({
+			e.sustain ?? {
+				e.dur
+			} ?? {
+				0
+			};
+		}, {
+			0
+		})
+	}
+
+	prSetSustain {
+		|e, dur=0|
+		try {
+			e.sustain !? {
+				e[\sustain] = dur
+			} ?? {
+				e[\dur] = dur;
+			}
 		}
 	}
 
@@ -484,13 +510,13 @@ OSequence {
 		var lastEvents, duration;
 		events.do {
 			|eventList, time|
-			"% - %".format(time, lastTime).postln;
+			// "% - %".format(time, lastTime).postln;
 			if (lastEvents.notNil) {
 				duration = time - lastTime;
 				lastEvents.do {
 					|e|
 					if (e.isKindOf(Event)) {
-						this.prSetDur(e, duration)
+						this.prSetSustain(e, duration)
 					}
 				}
 			};
@@ -501,7 +527,7 @@ OSequence {
 		lastEvents.do {
 			|e|
 			if (e.isKindOf(Event)) {
-				this.prSetDur(e, duration);
+				this.prSetSustain(e, duration);
 			}
 		}
 	}
