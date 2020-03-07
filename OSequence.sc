@@ -248,8 +248,8 @@ OSequence {
 		}
 	}
 
-	crop {
-		|start=0, end|
+	trim {
+		|start=0, end=inf|
 		this.delete(end, inf, true);
 		if (start > 0) {
 			this.delete(0, start, true);
@@ -363,7 +363,7 @@ OSequence {
 
 	sub {
 		|start = 0, end|
-		^this.copy.crop(start, end);
+		^this.copy.trim(start, end);
 	}
 
 	overwrite {
