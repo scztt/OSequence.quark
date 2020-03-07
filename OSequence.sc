@@ -108,11 +108,13 @@ OSequence {
 
 	do {
 		|func|
+		var i = 0;
 		events.do {
 			|eventList, t|
 			eventList.do {
 				|event|
-				func.value(event, t);
+				func.value(event, t, i);
+				i = i + 1;
 			}
 		}
 	}
