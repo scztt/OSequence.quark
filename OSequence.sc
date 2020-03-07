@@ -119,6 +119,63 @@ OSequence {
 		}
 	}
 
+	collect {
+		|func|
+		var newSeq = OSequence();
+		this.do {
+			|e, t|
+			newSeq.put(t, func.value(e, t));
+		};
+		^newSeq
+	}
+
+	collectAs {
+		|func, class|
+		var newSeq = class.new();
+		this.do {
+			|e, t|
+			newSeq = newSeq.add(func.value(e));
+		};
+
+		^newSeq;
+	}
+
+	doTimes {
+		|func|
+
+		events.do {
+			|eventList, time|
+			func.value(eventList.shallowCopy, time);
+		}
+	}
+
+	pairsDo {
+		|func|
+		var indexA, indexB;
+		if (events.indices.size > 1) {
+			(1..(events.indices.size-1)).do {
+				|i|
+				indexA = events.indices[i - 1];
+				indexB = events.indices[i];
+				func.value(
+					events.array[i - 1],
+					events.array[i],
+					indexA, indexB,
+					i
+				)
+			}
+		}
+	}
+
+	doReplaceTimes {
+		|func|
+
+		events = events.collect({
+			|eventList, time|
+			func.value(eventList, time)
+		}).reject(_.isEmpty)
+	}
+
 	put {
 		|time, value|
 		if (value.notNil) {
@@ -257,6 +314,18 @@ OSequence {
 		}, false);
 	}
 
+	filter {
+		|func|
+		this.doReplace {
+			|e, t|
+			if (func.(e, t)) {
+				e
+			} {
+				nil
+			}
+		}
+	}
+
 	doPutSeq {
 		|func|
 		events.copy.do {
@@ -315,6 +384,55 @@ OSequence {
 			}
 		}, true);
 		this.putSeq(time, seq);
+	}
+
+	collectKey {
+		|keys|
+		var result;
+		keys = keys.asArray;
+		result = this.collectAs({
+			|e|
+			keys.collect {
+				|key|
+				e[key]
+			}
+		}, Array).flop;
+		if (keys.size == 1) {
+			result = result[0]
+		};
+		^result
+	}
+
+	setKey {
+		|keys, values, at=\wrapAt|
+		if (values.isFunction) {
+			^this.prSetKeyFn(keys, values, at)
+		} {
+			if (keys.isCollection.not) {
+				keys = [keys];
+				values = [values];
+			};
+			values = values.collect(_.asArray);
+			this.do {
+				|e, t, i|
+				keys.do {
+					|key, j|
+					e[key] = values.perform(at, j).perform(at, i);
+				}
+			}
+		}
+	}
+
+	prSetKeyFn {
+		|keys, valueFunc, at=\wrapAt|
+		keys = keys.asArray;
+		this.do {
+			|e, t|
+			valueFunc.value(e.atAll(keys), t).do {
+				|value, i|
+				e[keys[i]] = value;
+			}
+		}
 	}
 
 	++ {
