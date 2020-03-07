@@ -75,11 +75,22 @@ OSequence {
 	}
 
 	copy {
-		var eventsCopy = events.collect {
+		var seqCopy, eventsCopy;
+
+		eventsCopy = events.collect {
 			|eventList|
-			eventList.copy
+			eventList.collect {
+				|e|
+				e.copy;
+			}
 		};
-		^super.shallowCopy.events_(eventsCopy);
+
+		seqCopy = OSequence();
+		seqCopy.events = eventsCopy;
+		seqCopy.extend = this.extend;
+		seqCopy.modifyEvents = this.modifyEvents;
+		seqCopy.duration = this.duration;
+		^seqCopy
 	}
 
 	init {
