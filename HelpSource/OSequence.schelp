@@ -1,228 +1,468 @@
 TITLE:: OSequence
-summary:: (put short description here)
+summary:: Collections of abstract events in time
 categories:: Undocumented classes
-related:: Classes/SomeRelatedClass, Reference/SomeRelatedStuff, etc.
 
 DESCRIPTION::
-(put long description here)
-
-
-CLASSMETHODS::
-
-METHOD:: new
-(describe method here)
-
-ARGUMENT::  ... args
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-
-INSTANCEMETHODS::
-
-METHOD:: events
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: putAll
-(describe method here)
-
-ARGUMENT:: time
-(describe argument here)
-
-ARGUMENT:: valueArray
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: sub
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: end
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: delete
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: end
-(describe argument here)
-
-ARGUMENT:: ripple
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: duration
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: envWarp
-(describe method here)
-
-ARGUMENT:: env
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: warp
-(describe method here)
-
-ARGUMENT:: func
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: overwrite
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: seq
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: putSeq
-(describe method here)
-
-ARGUMENT:: baseTime
-(describe argument here)
-
-ARGUMENT:: seq
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: reverse
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: doReplace
-(describe method here)
-
-ARGUMENT:: func
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: doReplaceSeq
-(describe method here)
-
-ARGUMENT:: func
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: stretch
-(describe method here)
-
-ARGUMENT:: newDuration
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: insert
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: end
-(describe argument here)
-
-ARGUMENT:: seq
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: stretchBy
-(describe method here)
-
-ARGUMENT:: factor
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: crop
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: end
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: do
-(describe method here)
-
-ARGUMENT:: func
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: put
-(describe method here)
-
-ARGUMENT:: time
-(describe argument here)
-
-ARGUMENT:: value
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: doPutSeq
-(describe method here)
-
-ARGUMENT:: func
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: init
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: extend
-(describe method here)
-
-returns:: (describe returnvalue here)
-
-METHOD:: replaceSub
-(describe method here)
-
-ARGUMENT:: start
-(describe argument here)
-
-ARGUMENT:: end
-(describe argument here)
-
-ARGUMENT:: func
-(describe argument here)
-
-ARGUMENT:: ripple
-(describe argument here)
-
-returns:: (describe returnvalue here)
-
+A collection class for manipulating abstract events-in-time, with few assumptions about what these events are.
+
+code::
+o = OSequence();
+o.put(10, "event");
+o.at(10);
+o.trim(10, 15);
+o.at(0);
+o.put(2, "second event");
+o.at(2);
+o.stretchBy(2);
+o.at(4);
+o.plot(
+::
 
 EXAMPLES::
 
 code::
-(some example code)
+(
+// BOOT AND LOAD A BANK OF SAMPLES
+// RUN ONCE...
+s.waitForBoot {
+	~b = "/Users/fsc/Documents/_sounds/noise/*.aiff".pathMatch.collect {
+		|p|
+		Buffer.read(s, p).query;
+	};
+	~bus1 = Bus.audio(s, 1);
+	~bus2 = Bus.audio(s, 1);
+};
+)
+
+(
+// BASIC SAMPLE PLAYER
+SynthDef(\sample, {
+	var env, sig, buffer;
+
+	buffer = \buffer.kr(-1);
+
+	env = Env.perc(0.001, 0.9).kr(
+		gate:1,
+		doneAction:2
+	);
+
+	sig = PlayBuf.ar(
+		1,
+		bufnum:  buffer,
+		rate: \rate.kr(1),
+		startPos: BufSampleRate.kr(buffer) * \startPos.kr(0),
+		doneAction:2
+	);
+	sig = env * \amp.kr(1) * sig;
+	sig = Pan2.ar(sig, Rand(-0.2, 0.2));
+
+	OffsetOut.ar(\out.kr, sig);
+}).add;
+
+// POST PROCESS FOR SAMPLES
+SynthDef(\munge, {
+	var in, sig, freq, decay, coef, amp;
+
+	freq = \freq.kr(10);
+	freq = freq.lag(0.1 * [0.01, 0.05, 0.12, 0.19, 0.4]); // one freq, with many weird lag values
+	freq = freq * [0.5, 1.02, 1, 2, 1.12];               // scale frequencies
+
+	decay = \decay.kr(1);
+	coef = \coef.kr(0.2);
+
+	in = In.ar(\in.kr, 2);
+	in = BLowPass.ar(in, \lpf.kr(19000), 0.8);
+
+	// Bank of plucks, separate for left and right channel
+	sig = in.collect {
+		|in|
+		Pluck.ar(
+			in, in,
+			1,
+			freq.reciprocal,
+			decaytime: decay,
+			coef: coef
+		).sum;
+	};
+	sig = LeakDC.ar(sig, 0.9);
+	sig = -12.dbamp * sig;
+
+	// Sum with freqshift versions for weird phasing
+	sig = sig
+	      + FreqShift.ar(sig, SinOsc.kr(1/11).exprange(0.01, 3.8))
+	      + FreqShift.ar(sig, SinOsc.kr(1/7).exprange(0.01, 3.8).neg);
+
+	// Saturation
+	sig = SoftClipAmp8.ar(sig, 3);
+
+	sig = (-3.dbamp * in) + (\amp.kr(1) * sig);
+
+	Out.ar(\out.kr, sig);
+}).addReplace
+)
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+(
+// An OSequence is a sequence of objects in time. These can be any kind of object at all,
+// but generally they work best with SC Event objects, the kind that are produced by
+// a Pbind. You can construct an OSequence from a Pbind via the .from constructor.
+
+~seq = OSequence.from(
+	Pbind(
+		\instrument, \sample,
+		\bufferNum, Pseq([0, 1, 2, 3, 4, 5, 6, 7], inf),
+		\buffer, Pfunc({
+			|e|
+			~b.at(e.bufferNum).bufnum
+		}),
+		\dur, Pseq([1, 0.25, 0.25, 0.5], 8)
+	)
+);
+)
+
+// Each oseq has a collection of one or more events at times.
+~seq.times.postln;
+~seq[0.625].postln;
+~seq[0.5].do(_.play);
+~seq.play;
+
+// oseq's have a duration, which is sort of generated automatically, but can be changed too.
+~seq.duration;
+// ~seq.duration = 16;
+
+
+// The time in OSequences can be modified abstractly. The events (or whatever objects you put in them....)
+// can also be modified. There are only a few basic operations, but these can be strung together to make
+// very complex things. Here are some examples (you can use ~seq.play to hear it):
+~seq.play;
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Add an event at time 0.5 (a copy of the first event at t=0)...
+(
+~new = ~seq.copy.put(0.5, ~seq[0][0].copy);
+~new.play;
+)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .putAll
+// Add an array of several more events, all at that point in time.
+(
+~new = ~seq.copy.putAll(1,
+	[~seq[0][0], ~seq[1.5][0]]
+);
+~new.play;
+)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .putSeq
+// Insert an oseq at a point in time - this overlaps with existing events
+// Here we add the sequence back to itself, 0.125 seconds delayed
+(
+~new = ~seq.copy.putSeq(0.125, ~seq.copy);
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .delete
+// Delete a chunk of time. Last argument is ripple, e.g. do we
+// move events past the delete back in time
+(
+~new = ~seq.copy.delete(1, 2.5, true);
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .trim
+// Delete everything outside of a time range
+// Start point (in this case 2.5) will always end up as t=0
+(
+~new = ~seq.copy.trim(2.5, 6.5);
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .warp: Use a function to warp time values
+// This must return a new time value to put the event at
+// If second argument is true, function is called for start
+// AND end points of events, and event durations are changed accordingly.
+(
+~new = ~seq.copy;
+~new.putSeq(0.25, ~new.copy);
+~new.warp({
+	|time, event|
+	(time / 3).sin.abs * 8
+}, true);
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .envWarp: Use an envelope to warp time values
+// Env time values represent time values in the current oseq
+// Env level values represent new time values.
+(
+~new = ~seq.copy;
+~new.putSeq(0.25, ~new);
+
+// Play the first half slow and the second half fast...
+// This amounts to stretching the first 0.2s to 0.5 and
+// the last 0.8s to 0.5s.
+~new.envWarp(Env(
+	[0, 0.5, 1] * ~new.duration,
+	[0.2, 0.8] * ~new.duration,
+));
+~new.play;
+)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .stretch:
+// Stretch to a new duration.
+// This uses the oseq.duration property for scale
+(
+~new = ~seq.copy.stretch(30); // stretch to 6 seconds -
+~new.play;
+)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .stretchBy
+// Stretch by a factor
+// This uses the oseq.duration property for scale
+(
+~new = ~seq.copy.stretchBy(0.5); // twice as fast
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Reverse
+(
+~new = ~seq.copy.reverse;
+~new.play;
+)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .doPutSeq:
+// For each event in the sequence, call a function
+// and add the result to the sequence at that time via .putSeq
+// Note that old event still stays in the oseq. Return value
+// must be an oseq.
+// .doReplaceSeq does the same, but replaces the old event
+(
+~new = ~seq.copy.doPutSeq({
+	|event, time|
+	OSequence(
+		0.125, event.copy,
+		0.375, event.copy,
+		1.25, event.copy
+	)
+});
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .sub
+// Copy a sub-section of a sequence, according to start and end points
+(
+~new = ~seq.sub(0, 4).reverse ++ ~seq.sub(4, 8);
+~new.play;
+)
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .overwrite
+// Overwrite all event starting at a start time with
+// events from another sequence. Note that everything
+// from startTime to the duration of the sequence you provide
+// will be deleted.
+(
+~new = ~seq.copy.overwrite(4, ~seq.sub(4, 8).reverse);
+~new.play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .insert
+// Insert a sequence at a start time, pushing events after that
+// point later according to the duration....
+(
+~sub = ~seq.sub(1, 3);
+~new = ~seq.copy;
+~new.insert(3, ~sub.copy.reverse)
+	.insert(3, ~sub)
+	.insert(3, ~sub.copy.reverse);
+~new.stretchBy(0.5).play;
+)
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// .replaceSub(start, end, replacement)
+// Replace a sub-region with either a new OSequence
+// or the result of a function if a function is provided.
+(
+~new = ~seq.copy;
+~new.replaceSub(4, 8, OSequence.from(Pbind(
+	\degree, Pseq([0, 2, 3, 6, 9]),
+	\octave, [3, 4],
+	\dur, 0.25
+)));
+~new.play;
+)
+
+// Replace using a function instead - function argument is
+// the sub-oseq you're replacing
+(
+~new = ~seq.copy;
+~new.replaceSub(4, 8, {
+	|sub|
+	sub.doReplace({
+		|event|
+		(
+			degree: [0, 2, 3, 6, 9].choose.postln,
+			legato: 3,
+			octave: [3, 5]
+		)
+	})
+});
+~new.play;
+)
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// A LESS BORING EXAMPLE.....
+
+(
+~seq = OSequence.from(Pbind(
+	\instrument, \sample,
+	\out, ~bus1,
+	\amp, -12.dbamp,
+	\rate, 0.2,
+	\bufferNum, Pseq([0, 1, 2, 3, 4, 5, 6, 7].scramble, inf),
+	\buffer, Pfunc({
+		|e|
+		~b[e.bufferNum].bufnum
+	}),
+	\dur, Pseq([4, 1, 2, 1] / 8, 4)
+));
+
+// Set this to ensure adding new events doesn't change the overall duration of the oseq
+~seq.extend = false;
+
+// For every event, add another of buffer #10
+// delayed 4/3 times it's duration.
+~seq.doPutSeq({
+	|event, time|
+	event = event.copy;
+	event.buffer = ~b[10];
+	event.dur = event.dur * 4/3;
+	OSequence(
+		event.dur,
+		event.postln
+	)
+});
+
+// loop it a bunch
+~seq = ~seq ++ ~seq ++ ~seq ++ ~seq
+    ++ ~seq ++ ~seq ++ ~seq ++ ~seq
+    ++ ~seq ++ ~seq ++ ~seq ++ ~seq
+    ++ ~seq ++ ~seq ++ ~seq ++ ~seq;
+
+
+// take each 16 beat chunk.....
+[0, 16, 32, 48].do {
+	|n|
+	~seq.replaceSub(n, n+16, {
+		|sub|
+		// warp it... env is 0..1 but has extreme curvature
+		sub.envWarp(Env(
+			[0, 0.5, 1] * sub.duration,
+			[0.5, 0.5] * sub.duration,
+			[-4, 4]
+		))
+	});
+};
+
+// slow it down
+~seq.duration.postln; // 192
+~seq.stretchBy(3);
+
+// ~seq.play; // uncomment and play to hear where this is after manipulation
+
+Pdef(\freqs, Pbind(
+	\scale, Scale.harmonicMinor,
+	\degree, (
+		Pstutter(
+			Prand([0, 3, 8, 16, 18], inf),
+			6,
+		)
+	),
+	\octave,Prand([2, 5, 7, 1, 0], inf),
+));
+
+
+Pdef(\crusher, Ppar([
+
+	// Render our seq out with 8 repeats...≥
+	~seq.asStream(8),
+
+	// Render the same seq, but merge it with a Pmono -
+	// the Pmono event will happen at the same times as
+	// our sequence events, but will be Pmono's instead (e.g.
+	// they will send parameter changes to a \munge synth)
+	~seq.asStream(8)
+	<> Pdef(\freqs)
+	<> Pmono(\munge,
+		\in, 	~bus1,
+		\out, 	0,
+		\lpf, 	Pseg([0.0, 1, 0], [30, 6], [-3, 3], inf).linexp(0, 1, 20, 20000),
+		\decay, 20 * Prand([1, 1, 3, 5, 5, 10], inf),
+		\coef, 	Pseg([0.3, 0.8, 0.3], [16, 16], [-3, 3], inf)
+	)
+])).play;
+)
 ::
