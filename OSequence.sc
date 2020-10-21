@@ -484,8 +484,8 @@ OSequence {
 		|e|
 		var dur;
 		^try({
-			e.sustain ?? {
-				e.dur
+			e.use({ e[\sustain].value }) ?? {
+				e.use({ e[\dur].value })
 			} ?? {
 				0
 			};
@@ -497,7 +497,7 @@ OSequence {
 	prSetSustain {
 		|e, dur=0|
 		try {
-			e.sustain !? {
+			e[\sustain] !? {
 				e[\sustain] = dur
 			} ?? {
 				e[\dur] = dur;
