@@ -545,6 +545,7 @@ OSequence {
 
 	embedInStream {
 		|inEvent, repeats|
+
 		repeats.do {
 			var lastEvents;
 			var lastTime = 0;
@@ -589,5 +590,23 @@ OSequence {
 	asStream {
 		|repeats=1|
 		^Routine({ arg inval; this.embedInStream(inval, repeats) })
+	}
+
+	asDeltaStream {
+		|repeats=1|
+		^(Pfunc({
+			|e|
+			if (e.isRest) {
+				Rest(e.delta)
+			} {
+				e.delta
+			}
+		}) <> this.asStream(repeats))
+	}
+
+	asValueStream {
+		|repeats=1, key=\value|
+		^PstepEv(
+			this.asStream(repeats), repeats, key).asStream
 	}
 }
