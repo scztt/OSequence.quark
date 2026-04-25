@@ -24,22 +24,26 @@ OSequence {
 		var endTime = startTime + (duration ? 1000);
 		var time = startTime;
 		var oldTime = thisThread.beats;
+		var timingOffset;
 
 		thisThread.beats = startTime;
 
 		protect {
 			protoEvent = protoEvent ?? { Event.default };
 			while {
-				var dur, outEvent;
+				var dur, delta, outEvent;
 
 				outEvent = stream.next(protoEvent.copy);
 
 				if (outEvent.notNil) {
 					if (outEvent.isRest) {
 						dur = outEvent.dur.value();
+						delta = outEvent.delta.value();
 					} {
-						seq.put(time, outEvent);
+						timingOffset = outEvent.timingOffset ?? {0};
+						seq.put(time + timingOffset, outEvent);
 						dur = outEvent.dur.value();
+						delta = outEvent.delta.value();
 
 						if (trim && ((time + dur) > endTime)) {
 							dur = endTime - time;
@@ -48,7 +52,7 @@ OSequence {
 					};
 
 					if (dur.notNil) {
-						thisThread.beats = time = time + dur;
+						thisThread.beats = time = time + delta;
 					}
 				};
 
