@@ -1,0 +1,202 @@
+TITLE:: Subdivision
+summary:: rhythmic subdivision: split a duration into nested parts
+categories:: Streams-Patterns-Events>Patterns>Time
+related:: Classes/Psub, Clrsses/Psubv, Classes/OSequence
+
+DESCRIPTION::
+
+A Subdivision describes how to split a span of time into parts. Nested arrays
+divide their parent's span proportionally — so teletype::[1, 1]:: means "two
+equal halves," and teletype::[1, [1, 1]]:: means "first half is one event,
+second half is two." The empty symbol \\ or teletype::\rest::
+marks a rest.
+
+Most of the time you don't construct Subdivisions directly — you write a
+plain nested array and pass it to link::Classes/Psub:: (delta stream) or
+link::Classes/Psubv:: (value stream).
+
+code::
+// Four equal-duration events
+Psub([1, 1, 1, 1]).asStream.nextN(4, ()) // -> [0.25, 0.25, 0.25, 0.25]
+
+// Same total time, but the second half is split in two
+Psub([1, [1, 1]]).asStream.nextN(3, ()) // -> [0.5, 0.25, 0.25]
+
+// Mark rests with the empty symbol
+Psub([1, \rest, 1, 1]).asStream.nextN(4, ())
+::
+
+The whole subdivision is rescaled so its total duration matches teletype::length::
+(the teletype::\loop:: key in the input event, default 2 beats).
+
+CLASSMETHODS::
+
+METHOD:: asDeltaStream
+Used by link::Classes/Psub::. Returns a Routine yielding code::\delta:: values
+(durations between events) for the given subdivision description.
+
+argument:: desc
+Nested array describing the subdivision.
+
+argument:: repeats
+How many times to repeat. Default code::inf::.
+
+argument:: rerender
+If code::true::, re-evaluate the subdivision each repeat (so any embedded
+patterns re-pull). Default code::false::.
+
+METHOD:: asValueStream
+Like code::asDeltaStream::, but yields the subdivision teletype::value::
+(whatever was at each leaf of the array) instead of the duration. Used by
+link::Classes/Psubv::.
+
+METHOD:: render
+Lower-level: build an link::Classes/OSequence:: from a subdivision description,
+without wrapping in a stream.
+
+argument:: subdivisions
+Nested array describing the subdivision.
+
+argument:: length
+Total duration the subdivision should span. Default code::2::.
+
+argument:: durations
+If code::true:: (default), array entries are interpreted as relative
+durations. If code::false::, they're values to emit at each leaf.
+
+argument:: doGrid
+If code::true:: (default), snap event times to each leaf's code::grid::
+setting (see code::g(...)::).
+
+METHOD:: new
+Construct a Subdivision directly. Most users won't call this — use Psub/Psubv.
+
+argument:: value
+The leaf value, or a nested array.
+
+argument:: scale
+Relative duration weight within its parent. Default code::1::.
+
+argument:: offset
+Time offset (after scaling) added to this leaf's start. Default code::0::.
+
+argument:: grid
+Optional snap-to-grid resolution.
+
+argument:: isRest
+If code::true::, this leaf produces a rest.
+
+
+INSTANCEMETHODS::
+
+METHOD:: scale
+The leaf's relative duration weight within its parent group. Doubling
+code::scale:: means this leaf takes twice as long as its siblings.
+
+METHOD:: offset
+A time offset added to the leaf's onset. Useful for nudging individual hits
+forward or backward inside a tight grid.
+
+METHOD:: grid
+Snap-to-grid resolution. Set via code::.g(value)::.
+
+METHOD:: isRest
+If code::true::, this leaf is silent (no event emitted at its position).
+
+METHOD:: g
+Set the snap-to-grid resolution, e.g. code::1.g(1/8):: snaps to 1/8 boundaries.
+argument:: value
+Grid resolution (in beats). Default code::0.125::.
+
+METHOD:: |+
+Add to code::offset:: in place. Available as code::1 |+ 0.05:: to nudge a
+leaf 0.05 beats later.
+argument:: value
+
+METHOD:: |-
+Subtract from code::offset:: in place.
+argument:: value
+
+METHOD:: |*
+Multiply code::scale:: in place — make this leaf longer/shorter relative to
+siblings.
+argument:: scalar
+
+METHOD:: |/
+Divide code::scale:: in place.
+argument:: scalar
+
+METHOD:: duration
+Returns code::scale::.
+
+METHOD:: copy
+Returns a fresh copy.
+
+METHOD:: collect
+Map a function over the leaves of an array-valued Subdivision.
+argument:: function
+
+METHOD:: deepCollect
+Like code::collect::, but recurses into nested subdivisions.
+argument:: depth
+argument:: function
+argument:: index
+argument:: rank
+
+METHOD:: isArray
+Returns code::true:: if the value is a nested array (i.e. this Subdivision
+has children).
+
+METHOD:: valueArray
+Returns the underlying value (or array of values).
+
+METHOD:: asSubdivision
+Returns code::this::. (Numbers, symbols, etc. also respond to
+code::asSubdivision::, which is how plain values get coerced into Subdivisions
+inside Psub.)
+
+
+EXAMPLES::
+
+A simple kick pattern — seven hits per cycle, durations weighted as written:
+
+code::
+(
+SynthDef(\blip, { |out=0, freq=440, amp=0.1|
+    var env = EnvGen.kr(Env.perc(0.001, 0.1), doneAction: 2);
+    Out.ar(out, SinOsc.ar(freq) * env * amp ! 2);
+}).add;
+)
+
+Pdef(\kick, Pbind(
+    \instrument, \blip,
+    \dur, Psub([
+        1.5, 1.5, 1,
+        1, 1, 0.5, 1.5
+    ]).repeat,
+    \freq, 80
+)).play;
+::
+
+Nested subdivisions and rests — the inner array splits its slot in two,
+and \\ marks rests. The outer array is one cycle of length code::\loop:::
+
+code::
+Pdef(\nested, Pbind(
+    \instrument, \blip,
+    \loop, 4,                        // 4 beats per cycle
+    \dur, Psub([
+        [1, 1, 1, 1, \, \],          // first half: 4 hits then 2 rests
+        [1, \, 1, 1, 1, \],          // second half
+    ]).repeat,
+    \freq, Pseq([300, 600], inf)
+)).play;
+::
+
+Compare with link::Classes/Psubv:: when you want VALUES, not durations:
+
+code::
+// Yields whatever's at each leaf, with timing derived from nesting.
+Psubv([\a, [\b, \c], \d], inf).asStream.nextN(4, (loop: 4))
+// -> [\a, \b, \c, \d]
+::
