@@ -138,7 +138,7 @@ OSequence {
 		var newSeq = class.new();
 		this.do {
 			|e, t|
-			newSeq = newSeq.add(func.value(e));
+			newSeq = newSeq.add(func.value(e, t));
 		};
 
 		^newSeq;
@@ -263,17 +263,21 @@ OSequence {
 	warp {
 		|func, warpDuration=true|
 		var oldEvents = events;
+		var newDuration;
+
 		events = Order();
+		newDuration = warpDuration.if({ func.value(duration) }, { duration });
 
 		oldEvents.do {
 			|eventList, time|
 			eventList.do {
-				|event|
-				var newStart = func.value(time, event);
+				|event, i|
+				var newEnd, newStart = func.value(time, event);
 
 				if (modifyEvents) {
-					var newEnd = this.prGetSustain(event).asArray.maxItem;
+					newEnd = this.prGetSustain(event).asArray.maxItem;
 					newEnd = func.value(time + newEnd, event);
+
 					if (newEnd < newStart) {
 						var e = newEnd;
 						newEnd = newStart;
@@ -287,9 +291,7 @@ OSequence {
 			}
 		};
 
-		if (warpDuration) {
-			duration = func.value(duration);
-		}
+		duration = newDuration;
 	}
 
 	envWarp {
