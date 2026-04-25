@@ -1,7 +1,9 @@
 +OSequence {
 	plot {
-		|yKey=\midinote, ySpec=nil, plotType=\event|
+		|yKey=\midinote, ySpec=nil, plotType=\event, xScale = 16, yScale = 8|
+
 		var view, keys, minVal, maxVal, xSpec, scale;
+		var update;
 		var sustainFunc = {
 			|event|
 			event = event.copy;
@@ -20,30 +22,33 @@
 				})
 		};
 
-		scale = Scale.majorPentatonic;
+		update = {
+			scale = Scale.majorPentatonic;
 
-		ySpec = ySpec ?? { ControlSpec(0, 1) };
+			ySpec = ySpec ?? {
+				keys = Set();
+				this.do {
+					|event, time|
+					event = event.asPairs.flop.collect(_.asEvent);
+					event.do {
+						|event|
+						keys.add(valueFunc.(event))
+					}
+				};
 
-		keys = Set();
-		this.do {
-			|event, time|
-			event = event.asPairs.flop.collect(_.asEvent);
-			event.do {
-				|event|
-				keys.add(valueFunc.(event))
-			}
+				keys = SortedList.newFrom(keys);
+				minVal = ((keys.first / 12).floor * 12).round(1);
+				maxVal = ((keys.last / 12).ceil * 12).round(1);
+
+				ControlSpec(minVal, maxVal+1)
+			};
+
+			xSpec = ControlSpec(
+				0, events.indices.maxValue({ |v| v })
+			);
 		};
 
-		keys = SortedList.newFrom(keys);
-		minVal = ((keys.first / 12).floor * 12).round(1);
-		maxVal = ((keys.last / 12).ceil * 12).round(1);
-
-		ySpec.minval = minVal;
-		ySpec.maxval = maxVal+1;
-
-		xSpec = ControlSpec(
-			0, events.indices.maxValue({ |v| v })
-		);
+		update.();
 
 		view = UserView();
 		view.drawFunc = {
@@ -53,8 +58,6 @@
 			var max = ySpec.maxval;
 			var min = ySpec.minval;
 			var xPos, yPos;
-			var xScale = 16;
-			var yScale = 8;
 			var height = (max - min) * yScale;
 
 			// Background - y axis
@@ -105,11 +108,10 @@
 						var value, sustain;
 
 						sustain = sustainFunc.(event);
-						value = ySpec.postln.unmap(valueFunc.(event).postln);
+						value = ySpec.unmap(valueFunc.(event));
 
 						xPos = time * xScale;
 						yPos = (1 - value) * height;
-						[value, sustain, xPos, yPos].postln;
 
 						Pen.fillColor = Color.hsv(0.6, 0.6, 1);
 						Pen.strokeColor = Color.hsv(0.6, 0.6, 1);
@@ -131,6 +133,11 @@
 				}
 			}
 		};
+
+		this.signal(\value).connectTo({
+			update.();
+			view.refresh();
+		}).freeAfter(view);
 
 		view.fixedSize = 2000@600;
 
